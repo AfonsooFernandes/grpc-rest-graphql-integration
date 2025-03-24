@@ -74,9 +74,9 @@ git clone <URL_DO_REPOSITÓRIO>
 cd project
 ```
 
-```bash
+
 3. Iniciar os containers Docker:
-```
+
 ```bash
 docker-compose up --build
 ```
