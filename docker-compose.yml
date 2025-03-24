@@ -1,0 +1,113 @@
+services:
+  grpc-server:
+    build: ./grpc-server
+    container_name: grpc-server
+    ports:
+      - "50051:50051"
+    volumes:
+      - grpc-server:/app/media
+    environment:
+      - GRPC_SERVER_PORT=50051
+      - MAX_WORKERS=10
+      - MEDIA_PATH=/app/media
+      - DBNAME=mydatabase
+      - DBUSERNAME=myuser
+      - DBPASSWORD=mypassword
+      - DBHOST=db
+      - DBPORT=5432
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=user
+      - RABBITMQ_PW=password
+    depends_on:
+      - db
+
+  rest-api-server:
+    build: ./rest_api_server
+    container_name: rest_api_server
+    ports:
+      - "8000:8000"
+    environment:
+      - GRPC_PORT=50051
+      - GRPC_HOST=grpc-server
+      - DBNAME=mydatabase
+      - DBUSERNAME=myuser
+      - DBPASSWORD=mypassword
+      - DBHOST=db
+      - DBPORT=5432
+    depends_on:
+      - db
+      - grpc-server
+
+  db:
+    image: postgres:latest
+    container_name: postgres-db
+    environment:
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypassword
+      - POSTGRES_DB=mydatabase
+    ports:
+      - "5400:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3.9-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+
+  worker:
+    build: ./worker-rabbit-csv
+    ports:
+      - "8003:8003"
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=user
+      - RABBITMQ_PW=password
+      - DBNAME=mydatabase
+      - DBUSERNAME=myuser
+      - DBPASSWORD=mypassword
+      - DBHOST=db
+      - DBPORT=5432
+    depends_on:
+      - rabbitmq
+      - db
+      - grpc-server
+
+  graphql-server:
+    build: ./graphql 
+    container_name: graphql-server
+    ports:
+      - "9000:9000" 
+    depends_on:
+      - db
+    command: ["python", "app.py"]
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./frontend/.env 
+    depends_on:
+      - rest-api-server
+      - grpc-server
+      - graphql-server
+      - db
+      - rabbitmq   
+
+volumes:
+  grpc-server:
+  pgdata:
