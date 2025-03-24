@@ -4,7 +4,7 @@
 
 **Ano Letivo:** 2024/2025
 
-**Autores:** Jorge Ribeiro e Leonardo Magalhães
+**Autores:** Afonso Fernandes
 
 ---
 
